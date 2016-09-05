@@ -1,0 +1,60 @@
+---
+# tasks file for
+
+
+- name: install letsencrypt
+  include: letsencrypt.yml
+  tags:
+    - letsencrypt
+
+- name: externalurl config 
+  lineinfile:
+    dest: "/etc/gitlab/gitlab.rb"
+    regexp: "external_url.*"
+    line: "external_url 'https://{{domain}}'"
+
+- name: redirect config
+  lineinfile:
+    dest: /etc/gitlab/gitlab.rb
+    regexp: .*nginx\['redirect_http_to_https'\].*
+    line: nginx['redirect_http_to_https'] = true
+  notify:
+  - reconfigure gitlab 
+
+- name: keep backup for 14 days
+  lineinfile:
+    dest: /etc/gitlab/gitlab.rb
+    regexp: .*gitlab_rails\['backup_keep_time'\].*
+    line: gitlab_rails['backup_keep_time'] = 1209600
+  notify:
+  - reconfigure gitlab 
+
+- name: ssl_certificate config
+  lineinfile:
+    dest: /etc/gitlab/gitlab.rb
+    regexp: .*nginx\['ssl_certificate'\].*
+    line: "nginx['ssl_certificate']= \"{{cert_path}}/fullchain.pem\""
+  notify:
+  - reconfigure gitlab 
+
+- name: ssl_certificate_key config
+  lineinfile:
+    dest: /etc/gitlab/gitlab.rb
+    regexp: .*nginx\['ssl_certificate_key'\].*
+    line: "nginx['ssl_certificate_key']= \"{{cert_path}}/privkey.pem\""
+  notify:
+  - reconfigure gitlab 
+
+- name: ssl_certificate_key config
+  lineinfile:
+    dest: /etc/gitlab/gitlab.rb
+    regexp: .*nginx\['custom_gitlab_server_config'\].*
+    line: "nginx['custom_gitlab_server_config']= \"location ^~ /.well-known {\n alias /var/www/letsencrypt/.well-known;\n}\n\""
+  notify:
+  - reconfigure gitlab 
+
+- name: create backup chron
+  cron: name="backup gitlab" minute="0" hour="2" job="/opt/gitlab/bin/gitlab-rake gitlab:backup:create CRON=1"
+
+
+

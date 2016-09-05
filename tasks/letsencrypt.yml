@@ -1,0 +1,37 @@
+---
+
+
+- name: create certbot dir
+  file: "path={{certbot_install_dir}} mode=755 state=directory"
+
+- name: download certbot
+  get_url: url="https://dl.eff.org/certbot-auto" dest="{{certbot_install_dir}}/certbot-auto"
+
+- name: make certbot executable
+  file: "path={{certbot_install_dir}}/certbot-auto mode=755"
+
+- name: check if cert does exist
+  stat: "path={{cert_path}}/cert.pem"
+  register: certificate
+
+
+- name: create cert
+  command: "{{certbot_install_dir}}/certbot-auto certonly -n --agree-tos --email {{cert_email}} --standalone -d {{domain}}"
+  when: certificate.stat.exists == False
+
+- name: renew cert
+  command: "{{certbot_install_dir}}/certbot-auto renew" 
+  when: certificate.stat.exists == True
+
+
+
+- name: renew cert cron entry
+  cron: 
+    name: renew cert
+    weekday: 0
+    minute: 0
+    hour: 0
+    job: /opt/certbot/certbot-auto renew 
+
+
+

@@ -1,0 +1,9 @@
+---
+# handlers file for
+- name: reconfigure gitlab
+  shell: "gitlab-ctl reconfigure"
+  notify:
+  - restart gitlab
+
+- name: restart gitlab
+  shell: "gitlab-ctl restart"
